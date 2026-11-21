@@ -28,9 +28,10 @@ Section 3 holds facts checked on the box. Open questions come last. Nothing gets
 | [0004](docs/decisions/0004-settings-in-each-component.md) | Settings live in each component repo (`.caduceus/project.toml`), protected from runs |
 | [0005](docs/decisions/0005-decision-records.md) | Decisions asked in an issue, recorded as ADR files plus an index line |
 | [0006](docs/decisions/0006-swarm.md) | A `swarm` label; squads in any language; a squad takes a whole feature |
-| [0007](docs/decisions/0007-feature-workspaces.md) | Feature workspaces, dependency-order landing, a landing log |
+| [0007](docs/decisions/0007-feature-workspaces.md) | Feature workspaces on `feat/<slug>` branches (superseded by 0010) |
 | [0008](docs/decisions/0008-workspace-repo.md) | Initiatives live in one private workspace repo, hermetica |
-| [0009](docs/decisions/0009-night-run.md) | The night run's rules (agreed for hermes-dispatch), moved to Caduceus |
+| [0009](docs/decisions/0009-night-run.md) | The night run's rules (agreed for hermes-dispatch), moved to Caduceus (merge target amended by 0010) |
+| [0010](docs/decisions/0010-gitflow.md) | Gitflow: main stable, develop for work, typed task branches in worktrees, PRs, Martin confirms every release |
 
 ## 3. Facts checked (2026-11-11, optiplex)
 
@@ -47,6 +48,11 @@ Section 3 holds facts checked on the box. Open questions come last. Nothing gets
 - Work board (`PVT_kwHOAkoXDc4Bo1_m`): Status Todo, Ready, In progress, Needs check, Done; Priority P0-P2. Sub-issues
   and blocked-by work across repos (hermes-dispatch#1 has sub-issues in five repos).
 - The Go host helpers that run today use 4.5 MB (term) and 13.5 MB (agents) of memory.
+- GitHub's free plan answers 403 "Upgrade to GitHub Pro" for branch protection and rulesets on private repos, and an
+  account can't approve its own pull request.
+- 2026-11-12: `develop` created from main and made the default branch (rebase and merge-commit merges on, head
+  branches deleted on merge) in hermes-relay, trismegistus-mac, trismegistus-android, homelab, news-reader, mage-sys,
+  tablet-kiosk, hermes-dispatch, caduceus and endfield-dotfiles; the checkouts on optiplex and the Mac track it.
 - The relay repo is `xMuramasa/hermes-relay` (renamed from `trismegistus` on 2026-11-11). Its Go module paths still
   read `github.com/xMuramasa/trismegistus/...`, which is harmless for local modules.
 
@@ -124,8 +130,7 @@ scripts/                     build, test and guard scripts: runs use them, never
 | What | Where |
 | --- | --- |
 | Main checkouts | `~/Projects/<repo>` on optiplex; Mac builds over `ssh mac` |
-| Single-repo task worktrees | `~/Projects/<repo>-wt/issue-<N>` (as today) |
-| Feature workspaces | `~/Projects/.caduceus/features/<initiative>-<slug>/<repo>` |
+| Task worktrees | `~/Projects/<repo>-wt/issue-<N>`, one per task (Hermes' own edits too), on `<type>/<N>-<slug>` |
 | Run state | `~/.local/state/caduceus/runs/` (flat; same file set as hermes-dispatch; 30 days) |
 | Daemon socket | `~/.local/state/caduceus/caduceus.sock` (0660, like the term helper) |
 | Work items | GitHub issues + the Work board |
@@ -144,7 +149,7 @@ kind = "service"                 # macos-app | android-app | web-app | service |
 language = "go"                  # informational; the tools below are what count
 model = "opus"                   # default model for solo runs; the issue's `agent:` label wins
 effort = "high"
-default_branch = "main"
+base_branch = "develop"          # task branches start here; "main" only for repos outside gitflow
 hosts = ["optiplex"]             # "mac": skipped at night when `ssh mac` doesn't answer
 locks = []                       # shared resources a run holds: "mac-build", "gradle"
 night = true                     # may the night run take this component's issues
@@ -184,7 +189,8 @@ checked by one probe run at setup (`caduceus component init`).
 ## 7. How work gets done
 
 ```text
-intake -> triage -> (design) -> ready -> dispatch -> execute -> review + merge -> land -> check -> done
+intake -> triage -> (design) -> ready -> dispatch -> execute -> review + merge into develop -> check -> done
+                                                                   ... done work on develop -> release (Martin confirms) -> main
 ```
 
 - **Intake**: chat, the app, phone capture, Hermes' audits, night-report follow-ups. Everything becomes an issue: a
@@ -195,11 +201,13 @@ intake -> triage -> (design) -> ready -> dispatch -> execute -> review + merge -
 - **Ready**: Martin's go (Ready status, the app's Dispatch Tonight, "go" in chat) or the `hermes` label.
 - **Dispatch**: `caduceus dispatch check` (open, blockers closed, not running, settings present, budget, slots, locks,
   Owns overlap), then start: worktree, brief, rules, launch, an issue comment "Started HH:MM", Status In progress.
-- **Review + merge**: always Hermes. The diff must stay inside Owns; Hermes re-runs the gates and review gates, runs a
-  secrets scan, reads the risky code, commits with `Fixes #N`, pushes and checks the remote.
-- **Land** (features, section 9).
-- **Check**: UI changes go to Needs check with what to look at (and a Penpot-vs-app pair once snapshots exist);
-  everything else goes to Done.
+- **Review + merge**: always Hermes, through a pull request into develop (section 9). The diff must stay inside Owns;
+  Hermes re-runs the gates and review gates, runs a secrets scan, reads the risky code, commits as
+  `<type>(<scope>): <what> (#N)` with `Fixes #N`, opens the PR with its review as a comment, rebases, fast-forwards
+  develop and checks the remote.
+- **Check**: UI changes go to Needs check with what to look at (and a Penpot-vs-app pair once snapshots exist), on
+  the develop build Martin runs; everything else goes to Done.
+- **Release**: done work on develop reaches main only when Martin confirms a release (section 9).
 
 ### Executors
 
@@ -223,22 +231,43 @@ run folder and read-only components, `--permission-mode acceptEdits`, allow and 
   prompt, and the rules reach every run at launch anyway (squad panes included).
 - Tests check behavior, never the wording of rules or prompts.
 
-## 9. Feature workspaces and landing
+## 9. Branches, pull requests and releases (ADR 0010)
 
-1. `caduceus feature new <initiative>/<slug>` creates the tracking issue in hermetica, `features/<slug>.md` from the
-   template, and the sub-issues per component (server before client, `blocked by` edges, the binding contract pasted
-   into both ends when they run in parallel).
-2. `caduceus feature workspace <initiative>/<slug>` makes one worktree per touched component on `feat/<slug>`, branched
-   from its default branch. That branch is the feature's integration branch in that repo.
-3. A task inside a feature runs in its own worktree `issue-<N>` branched from `feat/<slug>`. It writes only its
-   repo and sees the sibling feature worktrees read-only. Hermes reviews it and merges it into `feat/<slug>`.
-4. `caduceus feature land` brings each `feat/<slug>` up to date with its default branch and runs every component's
-   gates plus the feature's cross-repo acceptance (from `features/<slug>.md`, e.g. the relay container + the apps'
-   contract tests + one end-to-end check through the public surface). Then it merges into main in dependency order
-   (the contract owner first), pushes, appends the commit set to `LOG.md`, and closes the feature. Deploys and
-   installs stay Martin's morning steps.
-5. Features should land within about a week; a longer one gets split. Tasks outside any feature go straight to main as
-   today.
+- **main** is stable and moves only when Martin confirms a release. **develop** is where work lands, and GitHub's
+  default branch, so pull requests target it and `Fixes #N` closes the issue when the PR lands there. Martin runs
+  develop builds (the relay, the apps); main is the confirmed snapshot to roll back to.
+- **Every task gets its own worktree** `~/Projects/<repo>-wt/issue-<N>`, branched from develop as
+  `<type>/<N>-<slug>` (`feat/28-ntfy-push`). Types: feat, fix, chore, docs, refactor, test; taken from the issue's
+  labels (`bug` is fix, `documentation` is docs, `chore`, `refactor`, `test`), feat otherwise. Hermes' own small edits
+  get a worktree too.
+- **Commits** say the same, more precisely: `<type>(<scope>): <what> (#N)`, `Fixes #N` in the body.
+- **Into develop**: one PR per task. Hermes reviews it (GitHub doesn't let the account approve its own PR, so the
+  review is a PR comment with the gates and findings), rebases the branch onto develop, re-runs the gates and
+  fast-forwards develop, so what was tested is exactly what lands. PRs ready together merge in priority order (P0,
+  P1, P2, then oldest); after each merge the others rebase and re-run their gates. Only task branches are ever
+  rebased, never develop or main.
+- **Releases**: when develop's changes are checked, or when Martin asks, Hermes opens a release PR (develop to main)
+  per repo, listing what's in it. On Martin's confirmation, main fast-forwards to the confirmed develop commit
+  (contract owners first), gets an annotated tag `vYYYY.MM.DD` (`.2` for a second that day) and a GitHub release with
+  the notes. Deploys and installs from main stay Martin's steps.
+- **Hotfixes**: `hotfix/<N>-<slug>` from main, a PR into main through the same confirmation, then main is merged into
+  develop.
+- **Cross-repo features**: their tasks are ordinary tasks merging into each repo's develop in dependency order (the
+  contract owner first), so develop keeps working mid-feature.
+  1. `caduceus feature new <initiative>/<slug>` creates the tracking issue in hermetica, `features/<slug>.md` from
+     the template, and the sub-issues per component (server before client, `blocked by` edges, the binding contract
+     pasted into both ends when they run in parallel).
+  2. `caduceus feature workspace <initiative>/<slug>` lists the feature's task worktrees side by side; each run writes
+     only its own and reads its siblings.
+  3. The feature is ready when its tasks are on develop and its cross-repo acceptance passes there (from
+     `features/<slug>.md`: e.g. the relay container, the apps' contract tests and one end-to-end check through the
+     public surface).
+  4. It lands when Martin confirms the release of its repos together; `LOG.md` records the tags that shipped
+     together. Features should land within about a week; a longer one gets split.
+- **Outside this flow**: hermetica and the Obsidian vault commit straight to main (decision records there are written
+  after Martin has answered).
+- **Enforcement**: GitHub's free plan can't protect branches in private repos, so Caduceus and Hermes hold the line:
+  no push to main without Martin's confirmation recorded on the release PR.
 
 ## 10. Squads (label `swarm`)
 
@@ -271,8 +300,8 @@ run folder and read-only components, `--permission-mode acceptEdits`, allow and 
 - Budget: weekly under 80 %, 5-hour window under 30 %, at most 3 runs, re-read before each launch.
 - One immediate retry for failures other than the usage limit. A limit cut-off is reported with "relaunch?" (the
   03:00 window lasts until about 08:00). Runs still going at 06:30 are reported and merged when Martin next chats.
-- Homelab: prepare and commit only. UI changes merge, then go to Needs check. Mac work is skipped when `ssh mac`
-  fails.
+- Everything merges into develop only; main never moves at night. Homelab: prepare only, never deployed. UI changes
+  go to Needs check. Mac work is skipped when `ssh mac` fails.
 - Up to 2 `needs-design` issues a night get 2-3 Penpot alternatives on a new page in the initiative's Penpot file,
   through the headless Penpot session (homelab#7).
 - The report goes to Telegram at 06:30 (and into the Jobs view): merged, Needs check, skipped and why, retried, still
@@ -294,7 +323,9 @@ run folder and read-only components, `--permission-mode acceptEdits`, allow and 
 ```text
 caduceus component init|check <repo>            settings scaffold + probe; validate
 caduceus initiative list|show <slug>
-caduceus feature new|show|workspace|land <initiative>/<slug>
+caduceus feature new|show|workspace <initiative>/<slug>
+caduceus pr open|merge <owner/repo#N>          task PR into develop; merge after gates, in queue order
+caduceus release propose|confirm [<repo>...|<initiative>]   release PRs; fast-forward main + tag on confirm
 caduceus dispatch check|start <owner/repo#N> [--model] [--effort] [--notes FILE] [--dry-run] [--force-quota]
 caduceus run list|status|stop|prune [<run>]
 caduceus night select|report
@@ -324,6 +355,7 @@ A `caduceus` symlink in `~/.local/bin`. Hermes' cron reaches it through small `.
 - The daemon socket is 0660 in a persistent directory (not `/run/user`), mounted into the relay read-only like the
   agents socket.
 - GitHub writes come from Hermes (gh) or the daemon (gh, Martin's token), never from runs.
+- Nothing pushes to main without Martin's confirmation on the release PR; at night main never moves.
 - Code, rules and templates here stay generic: no hosts, tokens or personal paths in them (those go in hermetica
   and in component settings). This SPEC describes the setup Caduceus is built for, so it names them.
 
@@ -333,8 +365,8 @@ A `caduceus` symlink in `~/.local/bin`. Hermes' cron reaches it through small `.
 | --- | --- | --- |
 | P0 | This SPEC, the ADRs, the two repos, the Hermopolis initiative | Martin's go on SPEC.md |
 | P1 | Rules: move the law out of the Hermes skills into `rules/`, `patterns/`, `templates/` and hermetica `rules/`; skills shrink to pointers | A run's rules file is built from these files only, and a real run with it passes review |
-| P2 | Core: settings, runs folder, `dispatch` and `run` commands ported from hermes-dispatch (its 25 tests ported), `component init/check`; settings files in every active component | `caduceus dispatch` replaces `dispatch` for a week of real runs; hermes-dispatch archived |
-| P3 | Initiatives and features: hermetica reader, `feature new/workspace/land`, board fields Initiative and Feature, `LOG.md` | One real cross-repo feature landed through `feature land` |
+| P2 | Core: settings, runs folder, `dispatch` and `run` commands ported from hermes-dispatch (its tests ported), typed task branches, `pr open/merge` and the merge queue, `component init/check`; settings files in every active component | `caduceus dispatch` replaces `dispatch` for a week of real runs; hermes-dispatch archived |
+| P3 | Initiatives, features and releases: hermetica reader, `feature new/workspace`, `release propose/confirm` with tags, board fields Initiative and Feature, `LOG.md` | One real cross-repo feature released through `release confirm` |
 | P4 | Night run (section 12) | One real night merged an eligible issue and the report reached Telegram and the Jobs view |
 | P5 | Squads (section 10, after round 4) | One `swarm` feature delivered by a squad |
 | P6 | Daemon + relay routes + app screens (a Hermopolis feature) | Martin dispatches, answers a decision and reads the night report from the Mac app |

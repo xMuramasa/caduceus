@@ -9,6 +9,8 @@ decided-by: Martin
 
 # 0009. The night run's rules move to Caduceus
 
+> Amended by [0010](0010-gitflow.md) (2026-11-12): night merges go into develop; main never moves at night.
+
 ## Context
 
 Martin agreed the night run's rules for hermes-dispatch in two interview rounds on 2026-11-02, then decided it waits

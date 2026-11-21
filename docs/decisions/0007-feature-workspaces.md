@@ -1,13 +1,17 @@
 ---
 id: 0007
 date: 2026-11-11
-status: accepted
+status: superseded
+superseded-by: 0010
 supersedes: null
 issue: null
 decided-by: Martin
 ---
 
 # 0007. Feature workspaces, dependency-order landing, a landing log
+
+> Superseded by [0010](0010-gitflow.md) (2026-11-12): a feature's tasks merge into each repo's develop; no
+> `feat/<slug>` branches. Dependency order and the landing log stay.
 
 ## Context
 
