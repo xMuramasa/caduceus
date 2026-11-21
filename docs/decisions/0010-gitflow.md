@@ -45,6 +45,9 @@ A for all five (Martin, 2026-11-12), with tagged releases ("we can configure tag
   rebased.
 - Releases: a PR develop to main per repo; on Martin's confirmation main fast-forwards, gets an annotated tag
   `vYYYY.MM.DD` (`.2` for a second that day) and a GitHub release with the notes.
+- Amended 2026-11-21 after the first releases, which Martin merged with GitHub's button: a release is a merge commit
+  on main (the button, or `gh pr merge --merge`), and develop then fast-forwards to main. Releases are proposed
+  weekly (W2). Interim guards: caduceus#11.
 
 ## Consequences
 

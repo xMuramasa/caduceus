@@ -5,8 +5,8 @@ tested and reviewed code across several repos at once. Hermes runs it; Trismegis
 dashboard and remote. Martin's initiatives, rules and feature specs live in the workspace repo,
 [hermetica](https://github.com/xMuramasa/hermetica).
 
-Status: **spec only** ([SPEC.md](SPEC.md), decisions in [docs/decisions](docs/decisions)). Nothing is built until
-Martin's go.
+Status: spec approved 2026-11-21 ([SPEC.md](SPEC.md), decisions in [docs/decisions](docs/decisions)); building
+from phase 1 (issues #2-#8). Interim gitflow guards in `hooks/` and `scripts/` (#11).
 
 ## Credit
 
