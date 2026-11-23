@@ -1,0 +1,7 @@
+{
+  "live": {
+    "plan": null,
+    "ok": false,
+    "error": "upstream: HTTP Error 429: Too Many Requests"
+  }
+}
