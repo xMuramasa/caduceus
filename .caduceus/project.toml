@@ -23,9 +23,9 @@ lint = ["go vet ./..."]
 format = ["gofmt -l ."]
 
 [review]
-# Hermes runs it in golang:1.27.3-bookworm (no cgo on optiplex).
+# -race needs cgo, which optiplex lacks: run it in the pinned golang container (module cache read-only, offline).
 gates = [
-  "go test -race ./...",
+  'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/src -w /src -v "$(go env GOMODCACHE)":/go/pkg/mod:ro -e GOPROXY=off -e GOFLAGS=-mod=readonly -e GOCACHE=/tmp/gocache -e HOME=/tmp golang:1.27.3-bookworm go test -race ./...',
 ]
 
 [access]
