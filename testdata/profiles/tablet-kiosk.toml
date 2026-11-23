@@ -1,0 +1,12 @@
+# Android/Gradle in Docker through scripts/build.sh. From docs/launch-examples/tablet-kiosk-issue-2-*.
+model = "opus"
+allow = ["Bash(python3*)", "Bash(scripts/build.sh*)", "Bash(./scripts/build.sh*)", "Bash(unzip -l*)", "Bash(du*)"]
+deny = ["Bash(adb*)"]
+protected = ["scripts/**", "docker/**", "gradle/wrapper/**", "gradlew*"]
+secret = ["~/.local/share/tablet-kiosk/**"]
+gates = ["scripts/build.sh"]
+network = "No direct network: no WebFetch, WebSearch, curl or wget. Dependencies come from Google's Maven and Maven Central through the version catalog, fetched by the build; add only what the issue allows and list each one with its version in the report."
+rules = [
+  "Build and test only with `scripts/build.sh` (no arguments for the full run; Gradle task names to run fewer, e.g. `scripts/build.sh testDebugUnitTest`). One Gradle build at a time (memory). The first run downloads Gradle and the dependencies: give it time.",
+  "The build reads `/signing/keystore.properties` inside the container (the release signing key); your Gradle code may load it, never log it.",
+]

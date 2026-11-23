@@ -1,0 +1,13 @@
+# This repo: Python 3.14, standard library only, unittest with fakes.
+model = "opus"
+allow = ["Bash(python3 -m unittest*)", "Bash(python3 -m compileall*)", "Bash(python3 -c*)",
+         "Bash(bin/dispatch --help*)", "Bash(./bin/dispatch --help*)"]
+deny = ["Bash(gh*)", "Bash(systemd-run*)", "Bash(systemctl*)", "Bash(pip*)", "Bash(uv*)"]
+protected = ["SPEC.md", "docs/launch-examples/**"]
+gates = ["python3 -m unittest discover -s tests", "python3 -m compileall -q dispatch bin"]
+network = "No network: no WebFetch, WebSearch, curl, wget, pip or uv. Standard library only; never add a dependency."
+rules = [
+  "Tests use fakes for every external command (gh, git where a real repo would be touched, docker, systemd-run, systemctl, date) and temporary directories for every path (runs folder, home, git repos). Nothing a test does may reach GitHub, horus-eye, systemd, the real `~/.local/state/hermes-runs` or a real repo.",
+  "Never run `bin/dispatch` against real issues; only `--help` and the test suite.",
+  "Code style: compact, typed, small pure functions, comments only where the why isn't obvious.",
+]

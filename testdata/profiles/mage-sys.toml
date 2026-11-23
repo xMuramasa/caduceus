@@ -1,0 +1,20 @@
+# Python/uv. From docs/launch-examples/mage-sys-phase3-rules.md (its launch script was not kept): no real model
+# or service calls, so no python3 or council commands beyond the read-only ones.
+model = "sonnet"
+env = { UV_OFFLINE = "1" }
+allow = [
+  "Bash(uv run pytest*)", "Bash(uv run python -m pytest*)",
+  "Bash(uv run council show*)", "Bash(uv run council runs*)", "Bash(uv run council stats*)",
+]
+deny = [
+  "Bash(council*)", "Bash(uv run council ask*)", "Bash(uv run council outcome*)",
+  "Bash(uv add*)", "Bash(uv sync*)", "Bash(uv lock*)", "Bash(uv pip*)", "Bash(pip*)", "Bash(uvx*)",
+]
+no_touch = ["~/.local/share/mage-sys"]
+gates = ["uv run pytest"]
+network = "No network and no real model or service calls: never run `claude`, `codex`, `council ask`, a real `council outcome`, curl/wget, or anything that reaches Hindsight (127.0.0.1:9177) or Jev (api.typesafe.ai). Tests use fakes only. No new dependencies (standard library + the existing typesafe-sdk/pydantic; pytest for dev)."
+rules = [
+  "Runtime data (`MAGE_DATA_DIR`, default ~/.local/share/mage-sys) is real user data: read-only for you (`council show/runs/stats` only). Tests set their own MAGE_DATA_DIR.",
+  "Match the existing code style: compact, typed, small pure functions, comments only where the why isn't obvious. Fix real bugs you find in touched code and mention them in the report; don't rewrite working code.",
+  "Don't start long-running processes.",
+]

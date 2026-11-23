@@ -1,0 +1,16 @@
+# Compose files, Caddyfile, Homepage config and docs. Prepare-only (SPEC.md section 4): the delegate edits files,
+# Hermes validates at review, starting anything is a morning step. No launch script was kept; derived by analogy.
+model = "sonnet"
+secret = ["**/.env"]
+# Homepage: the delegate rebuilds custom.css and parses the YAML itself (homelab#1 ran without them: python3 was
+# not allowed, and a misplaced entry broke services.yaml). The host python has no PyYAML, hence uv.
+allow = ["Bash(python3 apps/homepage/theme/build.py*)", "Bash(uv run -q --no-project --with pyyaml python -c*)"]
+gates = [
+  "python3 apps/homepage/theme/build.py (after any change under apps/homepage/)",
+  "uv run -q --no-project --with pyyaml python -c \"import yaml,sys; [yaml.safe_load(open(f)) for f in sys.argv[1:]]\" apps/homepage/*.yaml",
+]
+hermes_gates = ["docker compose config -q", "caddy validate (in a throwaway container)"]
+rules = [
+  "You only edit files (compose files, Caddyfile, Homepage config, docs). Nothing is created, started, recreated or reloaded; no container runs.",
+  "Never put a secret value in a file; refer to the existing env files by variable name.",
+]
