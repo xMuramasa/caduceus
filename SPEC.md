@@ -153,6 +153,8 @@ base_branch = "develop"          # task branches start here; "main" only for rep
 hosts = ["optiplex"]             # "mac": skipped at night when `ssh mac` doesn't answer
 locks = []                       # shared resources a run holds: "mac-build", "gradle"
 night = true                     # may the night run take this component's issues
+rules = ["Never log tokens, pairing codes or message text."]
+network = "No network. Standard library only unless the issue says otherwise."
 
 [env]                            # set on the run's command line
 GOPROXY = "off"
@@ -179,8 +181,6 @@ read_only = ["hermes-relay"]             # other components by name; resolved to
 no_touch = []
 secret = []
 
-rules = ["Never log tokens, pairing codes or message text."]
-network = "No network. Standard library only unless the issue says otherwise."
 ```
 
 The rules define what each gate means. A project's language choice includes choosing its tool for each gate,
