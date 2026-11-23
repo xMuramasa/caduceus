@@ -23,7 +23,7 @@ var commands = []command{
 	{"component", "init|check <repo>", "settings scaffold from a profile; validate", component},
 	{"initiative", "list|show <slug>", "initiatives in the workspace repo", nil},
 	{"feature", "new|show|workspace <initiative>/<slug>", "a feature's tracking issue, spec and workspace", nil},
-	{"pr", "open|merge <owner/repo#N>", "task PR into develop; merge after gates, in queue order", nil},
+	{"pr", "open|merge <owner/repo#N>", "task PR into develop; merge after gates, in queue order", prCmd},
 	{"release", "propose|confirm [<repo>...|<initiative>]", "release PRs; fast-forward main + tag on confirm", nil},
 	{"dispatch", "check|start <owner/repo#N> [--model] [--effort] [--notes FILE] [--dry-run] [--force-quota]",
 		"eligibility report; start a run", dispatchCmd},
@@ -74,7 +74,7 @@ func run(args []string, x ext.Ext, stdout, stderr io.Writer) int {
 	return 2
 }
 
-// parse lets flags come before or after the positional arguments, and wants exactly n of them.
+// parse lets flags come before or after the positional arguments, and wants exactly n of them (n < 0: at least one).
 func parse(fs *flag.FlagSet, args []string, n int) ([]string, error) {
 	var pos []string
 	for {
@@ -86,7 +86,10 @@ func parse(fs *flag.FlagSet, args []string, n int) ([]string, error) {
 		}
 		pos, args = append(pos, fs.Arg(0)), fs.Args()[1:]
 	}
-	if len(pos) != n {
+	if n < 0 && len(pos) == 0 {
+		return nil, fmt.Errorf("want at least 1 argument")
+	}
+	if n >= 0 && len(pos) != n {
 		return nil, fmt.Errorf("want %d argument(s), got %d", n, len(pos))
 	}
 	return pos, nil
