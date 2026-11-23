@@ -26,7 +26,7 @@ var commands = []command{
 	{"pr", "open|merge <owner/repo#N>", "task PR into develop; merge after gates, in queue order", nil},
 	{"release", "propose|confirm [<repo>...|<initiative>]", "release PRs; fast-forward main + tag on confirm", nil},
 	{"dispatch", "check|start <owner/repo#N> [--model] [--effort] [--notes FILE] [--dry-run] [--force-quota]",
-		"eligibility report; start a run", nil},
+		"eligibility report; start a run", dispatchCmd},
 	{"run", "list|status|stop|prune [<run>]", "runs and their files", runCmd},
 	{"night", "select|report", "the night run", nil},
 	{"squad", "start|status|stop <initiative>/<slug>", "squads for swarm features", nil},
