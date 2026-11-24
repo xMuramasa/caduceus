@@ -1,0 +1,1 @@
+{"live": {"plan": null, "ok": true, "limits": [{"kind": "session", "percent": 13, "resets_at": "2026-11-02T19:50:00.518616+00:00"}, {"kind": "weekly_all", "percent": 25, "resets_at": "2026-11-08T14:00:00.518635+00:00"}, {"kind": "weekly_scoped", "percent": 0, "resets_at": "2026-11-08T14:00:00+00:00"}]}}

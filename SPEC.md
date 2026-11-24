@@ -1,4 +1,4 @@
-# Caduceus: SPEC v1 (draft, waiting for Martin's go)
+# Caduceus: SPEC v1 (approved by Martin, 2026-11-21)
 
 Caduceus is the engine of Martin's development workflow. It decides what a project is, where work lives, and how an
 issue becomes merged, tested and reviewed code, across several repos at once. Hermes runs it. Trismegistus (the Mac
@@ -6,7 +6,7 @@ and Android apps, through hermes-relay) is its dashboard and remote. Martin's ow
 specs) lives in the workspace repo, [hermetica](https://github.com/xMuramasa/hermetica); this repo stays generic.
 
 How to read this: decisions already taken are ADRs in [docs/decisions](docs/decisions) (one line each in section 2).
-Section 3 holds facts checked on the box. Open questions come last. Nothing gets built before Martin's go on this file.
+Section 3 holds facts checked on the box. Open questions come last. Martin approved this file on 2026-11-21; changes to it go through ADRs.
 
 ## 1. What it replaces
 
@@ -153,6 +153,8 @@ base_branch = "develop"          # task branches start here; "main" only for rep
 hosts = ["optiplex"]             # "mac": skipped at night when `ssh mac` doesn't answer
 locks = []                       # shared resources a run holds: "mac-build", "gradle"
 night = true                     # may the night run take this component's issues
+rules = ["Never log tokens, pairing codes or message text."]
+network = "No network. Standard library only unless the issue says otherwise."
 
 [env]                            # set on the run's command line
 GOPROXY = "off"
@@ -179,8 +181,6 @@ read_only = ["hermes-relay"]             # other components by name; resolved to
 no_touch = []
 secret = []
 
-rules = ["Never log tokens, pairing codes or message text."]
-network = "No network. Standard library only unless the issue says otherwise."
 ```
 
 The rules define what each gate means. A project's language choice includes choosing its tool for each gate,
@@ -246,12 +246,14 @@ run folder and read-only components, `--permission-mode acceptEdits`, allow and 
   fast-forwards develop, so what was tested is exactly what lands. PRs ready together merge in priority order (P0,
   P1, P2, then oldest); after each merge the others rebase and re-run their gates. Only task branches are ever
   rebased, never develop or main.
-- **Releases**: when develop's changes are checked, or when Martin asks, Hermes opens a release PR (develop to main)
-  per repo, listing what's in it. On Martin's confirmation, main fast-forwards to the confirmed develop commit
-  (contract owners first), gets an annotated tag `vYYYY.MM.DD` (`.2` for a second that day) and a GitHub release with
-  the notes. Deploys and installs from main stay Martin's steps.
-- **Hotfixes**: `hotfix/<N>-<slug>` from main, a PR into main through the same confirmation, then main is merged into
-  develop.
+- **Releases** (weekly, Martin's W2, 2026-11-21): every Sunday, or when Martin asks, Hermes opens a release PR
+  (develop to main) per repo with unreleased work, listing what's in it. Martin confirms by merging it on GitHub
+  ("Create a merge commit"; squash and rebase merges are disabled) or by telling Hermes, who merges it the same way,
+  contract owners first. The settle step then fast-forwards develop to main, adds the annotated tag `vYYYY.MM.DD`
+  (`.2` for a second that day) and publishes a GitHub release with the notes. Deploys and installs from main stay
+  Martin's steps.
+- **Hotfixes**: `hotfix/<N>-<slug>` from main, a PR into main through the same confirmation; settle then merges main
+  into develop.
 - **Cross-repo features**: their tasks are ordinary tasks merging into each repo's develop in dependency order (the
   contract owner first), so develop keeps working mid-feature.
   1. `caduceus feature new <initiative>/<slug>` creates the tracking issue in hermetica, `features/<slug>.md` from
@@ -266,8 +268,11 @@ run folder and read-only components, `--permission-mode acceptEdits`, allow and 
      together. Features should land within about a week; a longer one gets split.
 - **Outside this flow**: hermetica and the Obsidian vault commit straight to main (decision records there are written
   after Martin has answered).
-- **Enforcement**: GitHub's free plan can't protect branches in private repos, so Caduceus and Hermes hold the line:
-  no push to main without Martin's confirmation recorded on the release PR.
+- **Enforcement**: GitHub's free plan can't protect branches in private repos, so Caduceus holds the line. Until P2/P3
+  this is interim tooling (caduceus#11): `hooks/pre-push`, linked into every gitflow checkout, refuses pushes to main
+  without `CADUCEUS_RELEASE=<release PR>`, non-fast-forward develop or main, untyped branch names and
+  non-conventional subjects; `scripts/gitflow.py` audits drift (`audit`), settles releases hourly (`settle`) and lists
+  candidates for the Sunday proposal (`candidates`). `caduceus pr` and `caduceus release` replace the script.
 
 ## 10. Squads (label `swarm`)
 

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Caduceus gitflow guard (ADR 0010; Martin's rules: hermetica rules/git.md).
+# Linked into each checkout's .git/hooks/pre-push by scripts/install-hooks.sh; worktrees share it.
+# Applies only to repos whose remote has a develop branch. A confirmed release pushes main with
+# CADUCEUS_RELEASE=<release PR number>.
+set -euo pipefail
+
+remote="${1:-origin}"
+git rev-parse -q --verify "refs/remotes/$remote/develop" >/dev/null || exit 0
+
+zero=0000000000000000000000000000000000000000
+types='feat|fix|chore|docs|refactor|test|hotfix'
+branch_re="^($types)/[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$"
+subject_re="^($types|revert)(\([a-z0-9._/-]+\))?!?: .+ \(#[0-9]+(, #[0-9]+)*\)$"
+
+fail() {
+  echo "gitflow guard: $*" >&2
+  echo "  rules: hermetica rules/git.md (caduceus ADR 0010)" >&2
+  exit 1
+}
+
+while read -r _lref lsha rref rsha; do
+  case "$rref" in
+    refs/heads/*) branch="${rref#refs/heads/}" ;;
+    *) continue ;;  # tags and other refs
+  esac
+  if [ "$lsha" = "$zero" ]; then
+    case "$branch" in main | develop) fail "never delete $branch" ;; esac
+    continue
+  fi
+  case "$branch" in
+    main)
+      [ -n "${CADUCEUS_RELEASE:-}" ] ||
+        fail "main moves only when Martin confirms a release (push with CADUCEUS_RELEASE=<release PR number>)"
+      [ "$rsha" = "$zero" ] || git merge-base --is-ancestor "$rsha" "$lsha" || fail "main: not a fast-forward"
+      ;;
+    develop)
+      [ "$rsha" = "$zero" ] || git merge-base --is-ancestor "$rsha" "$lsha" ||
+        fail "develop: not a fast-forward (never rebase or force-push develop)"
+      ;;
+    *)
+      [[ "$branch" =~ $branch_re ]] ||
+        fail "branch '$branch' should be <type>/<N>-<slug> with type one of ${types//|/, }"
+      ;;
+  esac
+  # Commits this push adds to the remote (none when they're already on another remote branch).
+  while read -r c; do
+    [ -n "$c" ] || continue
+    subject="$(git log -1 --format=%s "$c")"
+    [ "$(git log -1 --format=%p "$c" | wc -w)" -lt 2 ] || continue  # merge commits
+    [[ "$subject" =~ $subject_re ]] ||
+      fail "commit $(git rev-parse --short "$c") \"$subject\" should be <type>(<scope>): <what> (#N)"
+  done < <(git rev-list "$lsha" --not --remotes="$remote")
+done
+exit 0

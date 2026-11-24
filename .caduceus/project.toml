@@ -1,0 +1,63 @@
+# Caduceus' own settings (SPEC section 6; generated from the hermes-dispatch profile, gates split by hand).
+kind = "cli"
+language = "go"
+model = "opus"
+hosts = ["optiplex"]
+rules = [
+  "Build and test only with `go test|vet|build ./...`, `go run ./cmd/caduceus ...` and `gofmt`.",
+  "Tests replace every external command (gh, systemd-run, systemctl, docker, date, HTTP to horus-eye) with fakes shaped like real answers, and use temporary directories for every path (home, runs folder, settings, git repos; real git only inside temp dirs). Nothing a test does may reach GitHub, systemd, horus-eye, the real ~/.local/state, ~/Projects or a real repo.",
+  "Never run the built binary against real issues or repos; only `--help`, `component check --file <temp file>` and the tests.",
+  "The port's behaviour comes from ~/Projects/hermes-dispatch (code and tests, read-only); its SPEC.md and README.md explain why. Keep its verified launch shape and error messages unless the issue says otherwise.",
+  "Code style: small packages under internal/, plain structs, errors wrapped with context, table-driven tests, comments only where the why isn't obvious. Code, rules and templates stay generic: no hostnames, tokens or personal paths in code; defaults that name Martin's setup go in testdata or the machine config.",
+]
+network = "No network: no WebFetch, WebSearch, curl, wget, `go get` or new modules (GOPROXY is off). Standard library plus the two modules already in go.mod (github.com/BurntSushi/toml, gopkg.in/yaml.v3); never add another."
+
+[env]
+GOFLAGS = "-mod=readonly"
+GOPROXY = "off"
+
+[gates]
+test = ["go test ./..."]
+build = ["go build ./..."]
+lint = ["go vet ./..."]
+format = ["gofmt -l ."]
+
+[review]
+# -race needs cgo, which optiplex lacks: run it in the pinned golang container (module cache read-only, offline).
+gates = [
+  'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/src -w /src -v "$(go env GOMODCACHE)":/go/pkg/mod:ro -e GOPROXY=off -e GOFLAGS=-mod=readonly -e GOCACHE=/tmp/gocache -e HOME=/tmp golang:1.27.3-bookworm go test -race ./...',
+]
+
+[access]
+allow = [
+  "Bash(go test*)",
+  "Bash(go vet*)",
+  "Bash(go build*)",
+  "Bash(go run ./cmd/caduceus*)",
+  "Bash(gofmt*)",
+  "Bash(./caduceus --help*)",
+  "Bash(python3 -m unittest*)",
+]
+deny = [
+  "Bash(go get*)",
+  "Bash(go mod*)",
+  "Bash(go install*)",
+  "Bash(gh*)",
+  "Bash(systemd-run*)",
+  "Bash(systemctl*)",
+  "Bash(./caduceus dispatch*)",
+  "Bash(./caduceus pr*)",
+  "Bash(./caduceus release*)",
+]
+protected = [
+  "SPEC.md",
+  "docs/decisions/**",
+  "hooks/**",
+  "scripts/**",
+  "go.mod",
+  "go.sum",
+  ".caduceus/**",
+]
+read_only = [
+  "hermes-dispatch",
+]

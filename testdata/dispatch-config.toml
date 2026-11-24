@@ -1,0 +1,14 @@
+# The machine config the dispatch tests use: Martin's Work board ids and horus-eye's container. Paths keep their
+# defaults, so they fall under the test's temporary home.
+horus_url = "docker://horus-eye:8088"
+
+[board]
+id = "PVT_kwHOAkoXDc4Bo1_m"
+status_field = "PVTSSF_lAHOAkoXDc4Bo1_mzhnUMsA"
+
+[board.status]
+Todo = "f75ad846"
+Ready = "bb2127bc"
+"In progress" = "47fc9ee4"
+"Needs check" = "6beab43a"
+Done = "98236657"

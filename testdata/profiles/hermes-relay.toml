@@ -1,0 +1,24 @@
+# Go relay (relay/), agents helper (agents/) and terminal helper (term/, hermes-relay#31). From docs/launch-examples/trismegistus-relay-25-*.
+# The main checkout has Martin's uncommitted work: worktrees are based on origin/main.
+model = "opus"
+env = { GOPROXY = "off", GOFLAGS = "-mod=readonly" }
+allow = [
+  "Bash(python3*)",
+  "Bash(go -C relay test*)", "Bash(go -C relay vet*)", "Bash(go -C relay build*)",
+  "Bash(go -C agents test*)", "Bash(go -C agents vet*)", "Bash(go -C agents build*)",
+  "Bash(go -C term test*)", "Bash(go -C term vet*)", "Bash(go -C term build*)",
+  "Bash(gofmt*)",
+]
+deny = ["Bash(go get*)", "Bash(go mod*)", "Bash(go install*)"]
+protected = ["apps/**", "probe/**", "compose*.yml", "Dockerfile*"]
+gates = ["go -C relay test ./...", "go -C relay vet ./...", "go -C agents test ./...", "go -C agents vet ./...",
+         "go -C term test ./...", "go -C term vet ./...", "gofmt -l relay agents term"]
+# -race needs cgo and optiplex has no gcc: Hermes runs these in golang:1.27.3-bookworm (--user $(id -u):$(id -g), the module
+# cache mounted read-only, GOPROXY=off); term's TestEchoAndEnvironment is skipped there (Debian's /etc/profile resets PATH).
+hermes_gates = ["go -C relay test -race ./...", "go -C agents test -race ./...", "go -C term test -race -skip TestEchoAndEnvironment ./..."]
+network = "No network: no WebFetch, WebSearch, curl, wget, `go get` or new modules (GOPROXY is off). Standard library only unless the issue says otherwise (term/ may use github.com/creack/pty, already in its go.mod and the module cache)."
+rules = [
+  "Build and test only with `go -C relay test|vet|build ...`, `go -C agents test|vet|build ...`, `go -C term test|vet|build ...` and `gofmt`.",
+  "Tests never touch the real relay, Hermes, the helper's real socket, a real database file outside the test's temp dir, or files outside temp dirs.",
+  "Never log tokens, pairing codes, image bytes, data URLs or message text.",
+]
