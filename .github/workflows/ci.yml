@@ -1,0 +1,51 @@
+name: CI
+
+# The [gates] of .caduceus/project.toml, the race detector from its [review] gates, and the gitflow guard's tests.
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-24.04
+    env:
+      GOFLAGS: -mod=readonly
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: build
+        run: go build ./...
+
+      - name: test
+        run: go test -count=1 ./...
+
+      - name: test with the race detector
+        run: go test -race -count=1 ./...
+
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: gitflow guard tests
+        run: python3 -m unittest scripts/test_gitflow.py
